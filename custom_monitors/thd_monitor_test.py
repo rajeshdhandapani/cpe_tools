@@ -31,11 +31,7 @@ association_field = 'thd_device_association_id'
 if association_field in os.environ:
     association_id = os.getenv(association_field)
 
-print ( "--> ")
-print (association_id)
-print (secret)
-print (password)
-print ( "<--")
+
 
 #
 # payload = semanticsApi.create_payload_for_association(association_id,device_id)
