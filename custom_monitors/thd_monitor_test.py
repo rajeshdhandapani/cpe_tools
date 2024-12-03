@@ -3,6 +3,8 @@ import time
 import requests
 import unittest
 import json
+import datetime
+import pytest
 
 password_field = 'thd_automation_password'
 password = "default"
@@ -25,6 +27,8 @@ account_email = "thdmonitor@afero.io"
 
 account_id="b02f5bc7-d694-426a-bb60-097fa7684660"
 device_id = "86e11097bd848f4a"
+br30_bulb_id = "89f60cdc7eebb95a"
+
 association_id = "default"
 
 association_field = 'thd_device_association_id'
@@ -44,10 +48,13 @@ class ThdMonitor(unittest.TestCase):
                    'Content-Type': 'application/json',"Authorization": f"Bearer {token}"}
         return headers
 
-    def get_metadevices(self, token, account_id,  device_id):
+    def get_metadevices(self, token, account_id,  test_device_id=None):
         u = 'https://semantics2.afero.net/v1/accounts/%s/metadevices' % (account_id)
         print (u)
-        query_params = {"deviceId":device_id}
+        if test_device_id==None:
+            test_device_id = device_id
+
+        query_params = {"deviceId":test_device_id}
 
         result = requests.get(u, headers=self.get_headers_common(token),params=query_params)
         print (result.status_code)
@@ -72,32 +79,36 @@ class ThdMonitor(unittest.TestCase):
         return result
 
 
-    def get_device_and_token(self):
+    def get_device_and_token(self,test_device_id=None):
         res = self.get_auth_token()
         token = res.json()['access_token']
         self.assertIsNotNone(token, "Failed to get token!")
-        res = self.get_metadevices(token, account_id, device_id)
+        res = self.get_metadevices(token, account_id, test_device_id=test_device_id)
         self.assertEqual(res.status_code, 200, "non 200 response while calling semantics api to get metadevices! ")
         devices  = res.json()
-        self.assertEqual(1,len(devices),"Expected only 1 device but got "+str(len(devices)))
+        self.assertEqual(len(devices), 1, "didn't get back 1 device from semantics api!")
         metadevice_id = devices[0]['id']
+
 
         return token,metadevice_id
     def remove_metadevice_from_account(self,token,metadevice_id):
         u = "https://semantics2.afero.net/v1/accounts/%s/metadevices/%s"%(account_id,metadevice_id)
-        result = requests.delete(u,headers=self.get_headers_common(token))
+        result = requests.delete(u,headers=self.get_headers_common(token),timeout=4)
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to remove metadevice! ")
-        print ("Time taken to remove device from account in seconds  : ",str(result.elapsed.total_seconds()))
+        elapsed_time = str(result.elapsed.total_seconds())
+        print ("Time taken to remove device from account in seconds  : ",elapsed_time)
 
-        return result
+        return elapsed_time
 
     def post_device_to_account(self,token,account_id,payload,expansions=[],locale="en_US",verified='true'):
         u = 'https://semantics2.afero.net/v1/accounts/%s/devices'%(account_id)
         query_params = {"expansions":expansions,"verified":verified,"locale":locale}
-        result = requests.post(u,headers=self.get_headers_common(token),data=payload,params=query_params)
+        result = requests.post(u,headers=self.get_headers_common(token),data=payload,params=query_params,timeout=4)
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to post device! ")
-        print ("Time taken to post device to account in seconds : ",str(result.elapsed.total_seconds()))
-        return result
+        elapsed_time = str(result.elapsed.total_seconds())
+
+        print ("Time taken to post device to account in seconds : ",elapsed_time)
+        return elapsed_time
     def get_association_payload(self,latitude=0.0,longitude=0.0,timezone="America/Los_Angeles"):
         payload = {
         "associationId": "1:%s:%s"%(association_id,device_id),
@@ -109,32 +120,102 @@ class ThdMonitor(unittest.TestCase):
         }
         return json.dumps(payload)
 
+
+    @pytest.mark.association
     def test_disassociate_and_associate(self):
-        token,  metadevice_id = self.get_device_and_token()
-        print ("got token")
-        self.remove_metadevice_from_account(token,metadevice_id)
-        print ("removed")
-        time.sleep(2)
-        payload = self.get_association_payload()
-        self.post_device_to_account(token, account_id, payload, verified='true')
-        print ("added back i think!")
-    #     self.voice_test(metadevice_id)
-    # #
-    # # def voice_test(self,metadevice_id):
-    # #     payload = self.create_payload_command( metadevice_ids=[metadevice_id])
-    # # def create_payload_command(self, locale_country="US", locale_language="en", intent="action.devices.EXECUTE",
-    # #                            customData=None,
-    # #                            metadevice_ids=None, command=None, params=None):
-    # #     timestamp = self.get_timestamp()
-    # #     devices = []
-    # #     for device in metadevice_ids:
-    # #         devices.append({"customData": customData, "id": device})
-    # #     command = {"inputs": [
-    # #         {"context": {"locale_country": locale_country, "locale_language": locale_language}, "intent": intent,
-    # #          "payload": {"commands": [
-    # #              {"devices": devices,
-    # #               "execution": [{"command": command, "params": params}]}]}}],
-    # #                "requestId": str(timestamp)}
-    # #
-    # #     return json.dumps(command)
+
+        elapsed_times_removal = []
+        elapsed_times_addition = []
+        for i in range (1,4):
+
+            time.sleep(5)
+            token, metadevice_id = self.get_device_and_token()
+
+            print ("got token")
+            elapsed_time = self.remove_metadevice_from_account(token,metadevice_id)
+            elapsed_times_removal.append(elapsed_time)
+            print ("removed")
+            time.sleep(5)
+            payload = self.get_association_payload()
+            elapsed_time = self.post_device_to_account(token, account_id, payload, verified='true')
+            elapsed_times_addition.append(elapsed_time)
+            print ("added back i think!")
+        print ("Time taken to remove device from account in seconds  : ",str(elapsed_times_removal))
+        print ("Time taken to post device to account in seconds : ",str(elapsed_times_addition))
+
+    @pytest.mark.voice
+    def test_voice(self):
+        token,  metadevice_id = self.get_device_and_token(test_device_id=br30_bulb_id)
+        self.assertIsNotNone(metadevice_id, "didn't get the metadevice id for the device id: " + br30_bulb_id)
+
+        print (metadevice_id)
+        self.voice_test(token,metadevice_id)
+
+
+    def voice_test(self,token,metadevice_id):
+        initial_state = self.get_current_on_off_state(token,metadevice_id)
+        self.assertIsNotNone(initial_state, "didn't get the initial power on/off state! ")
+        print(initial_state)
+        on_or_off = not initial_state == "on"
+        print(on_or_off)
+
+        payload = self.create_payload_command(customData={}, metadevice_ids=[metadevice_id],
+                                              command="action.devices.commands.OnOff",
+                                              params={"on": on_or_off})
+        self.executeCommand(token,payload)
+
+
+        time.sleep(5)
+        final_state = self.get_current_on_off_state(token,metadevice_id)
+        print(initial_state)
+        print(final_state)
+        self.assertIn(initial_state, ["on", "off"], "initial state is not on or off")
+        self.assertIn(final_state, ["on", "off"], "final state is not on or off")
+        self.assertNotEquals(initial_state, final_state, "didn't get the final power on/off state! ")
+
+
+    def create_payload_command(self, locale_country="US", locale_language="en", intent="action.devices.EXECUTE",
+                               customData=None,
+                               metadevice_ids=None, command=None, params=None):
+        timestamp =  int(datetime.datetime.now().timestamp() * 1000)
+        devices = []
+        for device in metadevice_ids:
+            devices.append({"customData": customData, "id": device})
+        command = {"inputs": [
+            {"context": {"locale_country": locale_country, "locale_language": locale_language}, "intent": intent,
+             "payload": {"commands": [
+                 {"devices": devices,
+                  "execution": [{"command": command, "params": params}]}]}}],
+                   "requestId": str(timestamp)}
+
+        return json.dumps(command)
+
+    def executeCommand(self,token,  payload,auth_header="Authorization"):
+        u = "https://home-depot-prod-actions.uc.r.appspot.com/fulfillment"
+        result = requests.post(u,data=payload,headers=self.get_headers_common(token))
+
+
+        self.assertEqual(result.status_code, 200, "didn't get back 200 from voice command run")
+        time.sleep(5)
+        print(result.text)
+        print(result.json())
+
+
+    def get_current_on_off_state(self, token,metadevice_id):
+        state = self.get_metadevice_semantic_state(token,metadevice_id)
+        values = state['values']
+        for value in values:
+            if value['functionClass'] == "power":
+                return value['value']
+
+
+    def get_metadevice_semantic_state(self, token,metadevice_id):
+        u = 'https://semantics2.afero.net/v1/accounts/%s/metadevices/%s/state' % (account_id, metadevice_id)
+        result = requests.get(u, headers=self.get_headers_common(token))
+
+
+        self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to get metadevice state! ")
+        print (result.json())
+        print("Time taken to get metadevice state in seconds : ", str(result.elapsed.total_seconds()))
+        return result.json()
 
