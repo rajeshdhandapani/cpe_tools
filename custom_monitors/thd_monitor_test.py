@@ -118,8 +118,23 @@ class ThdMonitor(unittest.TestCase):
         payload = self.get_association_payload()
         self.post_device_to_account(token, account_id, payload, verified='true')
         print ("added back i think!")
-        self.voice_test()
-
-    def voice_test(self):
-        
+    #     self.voice_test(metadevice_id)
+    # #
+    # # def voice_test(self,metadevice_id):
+    # #     payload = self.create_payload_command( metadevice_ids=[metadevice_id])
+    # # def create_payload_command(self, locale_country="US", locale_language="en", intent="action.devices.EXECUTE",
+    # #                            customData=None,
+    # #                            metadevice_ids=None, command=None, params=None):
+    # #     timestamp = self.get_timestamp()
+    # #     devices = []
+    # #     for device in metadevice_ids:
+    # #         devices.append({"customData": customData, "id": device})
+    # #     command = {"inputs": [
+    # #         {"context": {"locale_country": locale_country, "locale_language": locale_language}, "intent": intent,
+    # #          "payload": {"commands": [
+    # #              {"devices": devices,
+    # #               "execution": [{"command": command, "params": params}]}]}}],
+    # #                "requestId": str(timestamp)}
+    # #
+    # #     return json.dumps(command)
 
