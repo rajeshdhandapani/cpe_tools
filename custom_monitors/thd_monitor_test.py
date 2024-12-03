@@ -108,11 +108,13 @@ class ThdMonitor(unittest.TestCase):
 
     def test_disassociate_and_associate(self):
         token,  metadevice_id = self.get_device_and_token()
-        print (token)
+        print ("got token")
         self.remove_metadevice_from_account(token,metadevice_id)
+        print ("removed")
         time.sleep(2)
         payload = self.get_association_payload()
         self.post_device_to_account(token, account_id, payload, verified='true')
+        print ("added back i think!")
 
 
 
