@@ -149,7 +149,9 @@ class ThdMonitor(unittest.TestCase):
         self.assertIsNotNone(metadevice_id, "didn't get the metadevice id for the device id: " + br30_bulb_id)
 
         print (metadevice_id)
-        self.voice_test(token,metadevice_id)
+        for i in range (1,4):
+            time.sleep(5)
+            self.voice_test(token,metadevice_id)
 
 
     def voice_test(self,token,metadevice_id):
