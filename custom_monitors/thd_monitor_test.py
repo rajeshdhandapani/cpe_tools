@@ -87,6 +87,8 @@ class ThdMonitor(unittest.TestCase):
         u = "https://semantics2.afero.net/v1/accounts/%s/metadevices/%s"%(account_id,metadevice_id)
         result = requests.delete(u,headers=self.get_headers_common(token))
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to remove metadevice! ")
+        print ("Time taken to remove device from account in seconds  : ",str(result.elapsed.total_seconds()))
+
         return result
 
     def post_device_to_account(self,token,account_id,payload,expansions=[],locale="en_US",verified='true'):
@@ -94,6 +96,7 @@ class ThdMonitor(unittest.TestCase):
         query_params = {"expansions":expansions,"verified":verified,"locale":locale}
         result = requests.post(u,headers=self.get_headers_common(token),data=payload,params=query_params)
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to post device! ")
+        print ("Time taken to post device to account in seconds : ",str(result.elapsed.total_seconds()))
         return result
     def get_association_payload(self,latitude=0.0,longitude=0.0,timezone="America/Los_Angeles"):
         payload = {
@@ -115,6 +118,8 @@ class ThdMonitor(unittest.TestCase):
         payload = self.get_association_payload()
         self.post_device_to_account(token, account_id, payload, verified='true')
         print ("added back i think!")
+        self.voice_test()
 
-
+    def voice_test(self):
+        
 
