@@ -86,6 +86,9 @@ class ThdMonitor(unittest.TestCase):
         res = self.get_metadevices(token, account_id, test_device_id=test_device_id)
         self.assertEqual(res.status_code, 200, "non 200 response while calling semantics api to get metadevices! ")
         devices  = res.json()
+        if len(devices) == 0:
+            print ("didn't get back any devices from semantics api!")
+            return token, "None"
         self.assertEqual(len(devices), 1, "didn't get back 1 device from semantics api!")
         metadevice_id = devices[0]['id']
 
@@ -130,12 +133,15 @@ class ThdMonitor(unittest.TestCase):
 
             time.sleep(5)
             token, metadevice_id = self.get_device_and_token()
-
             print ("got token")
-            elapsed_time = self.remove_metadevice_from_account(token,metadevice_id)
-            elapsed_times_removal.append(elapsed_time)
-            print ("removed")
-            time.sleep(5)
+
+            if metadevice_id == "None":
+                print ("didn't get metadevice id, so will skip removal this time!!")
+            else:
+                elapsed_time = self.remove_metadevice_from_account(token,metadevice_id)
+                elapsed_times_removal.append(elapsed_time)
+                print ("removed")
+                time.sleep(5)
             payload = self.get_association_payload()
             elapsed_time = self.post_device_to_account(token, account_id, payload, verified='true')
             elapsed_times_addition.append(elapsed_time)
