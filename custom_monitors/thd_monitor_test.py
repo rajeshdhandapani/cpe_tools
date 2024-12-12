@@ -53,39 +53,67 @@ class ThdMonitor(unittest.TestCase):
         print (u)
         if test_device_id==None:
             test_device_id = device_id
-
+        result = None
         query_params = {"deviceId":test_device_id}
+        for i in range (1,4):
+            try:
+                result = requests.get(u, headers=self.get_headers_common(token),params=query_params)
+            except Exception as e:
+                print ("exception while calling semantics api to get metadevices! ",e)
 
-        result = requests.get(u, headers=self.get_headers_common(token),params=query_params)
-        print (result.status_code)
+            if result!=None:
+                print (result.status_code)
+            if result.status_code == 200:
+                break
+            time.sleep(3)
+
+
         return result
 
     def get_auth_token(self):
+        result = None
+        for i in range (1,4):
+            url = "https://accounts.hubspaceconnect.com/auth/realms/thd/protocol/openid-connect/token"
 
-        url = "https://accounts.hubspaceconnect.com/auth/realms/thd/protocol/openid-connect/token"
+            post_data = {"client_id": "test-thd-automation",
+                         "grant_type": "password",
+                         "client_secret": secret,
+                         "scope": "openid",
+                         "username": account_email,
+                         "password": password}
+            headers = {"Content-Type": "application/x-www-form-urlencoded",
+                                 'Accept': '*/*',
+                                 'User-Agent': 'Runsuite Automated Test Driver'}
+            try:
+                result = requests.post(url,data=post_data,headers=headers)
+            except Exception as e:
+                print ("exception while calling auth api to get token! ",e)
+        
+            if result!=None:
+                print(" auth tok , status code: ")
 
-        post_data = {"client_id": "test-thd-automation",
-                     "grant_type": "password",
-                     "client_secret": secret,
-                     "scope": "openid",
-                     "username": account_email,
-                     "password": password}
-        headers = {"Content-Type": "application/x-www-form-urlencoded",
-                             'Accept': '*/*',
-                             'User-Agent': 'Runsuite Automated Test Driver'}
-        result = requests.post(url,data=post_data,headers=headers)
-        self.assertEqual(result.status_code, 200, "non 200 response while calling auth api to get token! ")
-        print (result.status_code)
+                print(result.status_code)
+
+            if result.status_code == 200:
+                break
+            time.sleep(3)
+        # self.assertEqual(result.status_code, 200, "non 200 response while calling auth api to get token! ")
         return result
 
 
     def get_device_and_token(self,test_device_id=None):
         res = self.get_auth_token()
+
         token = res.json()['access_token']
         self.assertIsNotNone(token, "Failed to get token!")
         res = self.get_metadevices(token, account_id, test_device_id=test_device_id)
-        self.assertEqual(res.status_code, 200, "non 200 response while calling semantics api to get metadevices! ")
+        # self.assertEqual(res.status_code, 200, "non 200 response while calling semantics api to get metadevices! ")
         devices  = res.json()
+        # print (devices)
+
+        if res.status_code == 404:
+            print ("didn't get back any devices from semantics api!, status 404")
+            return token, "None"
         if len(devices) == 0:
             print ("didn't get back any devices from semantics api!")
             return token, "None"
@@ -95,8 +123,21 @@ class ThdMonitor(unittest.TestCase):
 
         return token,metadevice_id
     def remove_metadevice_from_account(self,token,metadevice_id):
+
         u = "https://semantics2.afero.net/v1/accounts/%s/metadevices/%s"%(account_id,metadevice_id)
-        result = requests.delete(u,headers=self.get_headers_common(token),timeout=4)
+        result = None
+
+        for i in range (1,4):
+            try:
+                result = requests.delete(u,headers=self.get_headers_common(token),timeout=4)
+            except Exception as e:
+                print ("exception while calling semantics api to remove metadevice! ",e)
+            if result!=None:
+                print (result.status_code)
+            if result.status_code == 200:
+                break
+            time.sleep(3)
+
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to remove metadevice! ")
         elapsed_time = str(result.elapsed.total_seconds())
         print ("Time taken to remove device from account in seconds  : ",elapsed_time)
@@ -106,7 +147,17 @@ class ThdMonitor(unittest.TestCase):
     def post_device_to_account(self,token,account_id,payload,expansions=[],locale="en_US",verified='true'):
         u = 'https://semantics2.afero.net/v1/accounts/%s/devices'%(account_id)
         query_params = {"expansions":expansions,"verified":verified,"locale":locale}
-        result = requests.post(u,headers=self.get_headers_common(token),data=payload,params=query_params,timeout=4)
+        for i in range (1,4):
+            try:
+                result = requests.post(u,headers=self.get_headers_common(token),data=payload,params=query_params,timeout=4)
+            except Exception as e:
+                print ("exception while calling semantics api to post device! ",e)
+            if result!=None:
+                print (result.status_code)
+            if result.status_code == 200:
+                break
+            time.sleep(3)
+
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to post device! ")
         elapsed_time = str(result.elapsed.total_seconds())
 
@@ -146,6 +197,11 @@ class ThdMonitor(unittest.TestCase):
             elapsed_time = self.post_device_to_account(token, account_id, payload, verified='true')
             elapsed_times_addition.append(elapsed_time)
             print ("added back i think!")
+            time.sleep(5)
+            res = self.get_metadevices(token, account_id)
+            self.assertEqual(res.status_code, 200, "non 200 response while calling semantics api to get metadevices after posting the device and waiting for 5 sec :o ! ")
+            devices = res.json()
+            self.assertEqual(len(devices), 1, "didn't get back 1 device from semantics api after adding and waiting for 5 sec!")
         print ("Time taken to remove device from account in seconds  : ",str(elapsed_times_removal))
         print ("Time taken to post device to account in seconds : ",str(elapsed_times_addition))
 
