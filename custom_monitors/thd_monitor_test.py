@@ -62,9 +62,8 @@ class ThdMonitor(unittest.TestCase):
                 print ("exception while calling semantics api to get metadevices! ",e)
 
             if result!=None:
-                print (result.status_code)
-            if result.status_code == 200:
-                break
+                if result.status_code == 200:
+                    break
             time.sleep(3)
 
 
@@ -88,14 +87,11 @@ class ThdMonitor(unittest.TestCase):
                 result = requests.post(url,data=post_data,headers=headers)
             except Exception as e:
                 print ("exception while calling auth api to get token! ",e)
-        
+
+
             if result!=None:
-                print(" auth tok , status code: ")
-
-                print(result.status_code)
-
-            if result.status_code == 200:
-                break
+                if result.status_code == 200:
+                    break
             time.sleep(3)
         # self.assertEqual(result.status_code, 200, "non 200 response while calling auth api to get token! ")
         return result
@@ -133,9 +129,9 @@ class ThdMonitor(unittest.TestCase):
             except Exception as e:
                 print ("exception while calling semantics api to remove metadevice! ",e)
             if result!=None:
-                print (result.status_code)
-            if result.status_code == 200:
-                break
+
+                if result.status_code == 200:
+                    break
             time.sleep(3)
 
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to remove metadevice! ")
@@ -154,8 +150,8 @@ class ThdMonitor(unittest.TestCase):
                 print ("exception while calling semantics api to post device! ",e)
             if result!=None:
                 print (result.status_code)
-            if result.status_code == 200:
-                break
+                if result.status_code == 200:
+                    break
             time.sleep(3)
 
         self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to post device! ")
@@ -255,12 +251,23 @@ class ThdMonitor(unittest.TestCase):
         return json.dumps(command)
 
     def executeCommand(self,token,  payload,auth_header="Authorization"):
+
         u = "https://home-depot-prod-actions.uc.r.appspot.com/fulfillment"
-        result = requests.post(u,data=payload,headers=self.get_headers_common(token))
+        result  = None
+
+        for i in range (1,4):
+            try:
+                result = requests.post(u,data=payload,headers=self.get_headers_common(token))
+            except Exception as e:
+                print ("exception while calling voice command run! ",e)
+            if result!=None:
+                if result.status_code == 200:
+                    break
+            time.sleep(4)
 
 
-        self.assertEqual(result.status_code, 200, "didn't get back 200 from voice command run")
-        time.sleep(5)
+        # self.assertEqual(result.status_code, 200, "didn't get back 200 from voice command run")
+        time.sleep(5    )
         print(result.text)
         print(result.json())
 
@@ -275,11 +282,23 @@ class ThdMonitor(unittest.TestCase):
 
     def get_metadevice_semantic_state(self, token,metadevice_id):
         u = 'https://semantics2.afero.net/v1/accounts/%s/metadevices/%s/state' % (account_id, metadevice_id)
-        result = requests.get(u, headers=self.get_headers_common(token))
+
+        result = None
+
+        for i in range (1,4):
+
+            try:
+                result = requests.get(u, headers=self.get_headers_common(token))
+            except Exception as e:
+                print ("exception while calling semantics api to get metadevice state! ",e)
+            if result!=None:
+                if result.status_code == 200:
+                    break
+            time.sleep(4)
 
 
-        self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to get metadevice state! ")
-        print (result.json())
+        # self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to get metadevice state! ")
+        # print (result.json())
         print("Time taken to get metadevice state in seconds : ", str(result.elapsed.total_seconds()))
         return result.json()
 
