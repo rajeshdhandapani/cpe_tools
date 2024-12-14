@@ -178,6 +178,8 @@ class ThdMonitor(unittest.TestCase):
         self.reboot_Device(token,device_id=ota_bulb_id)
         time.sleep(120)
         state = self.get_device_state(token,ota_bulb_id)
+        print ("State : ")
+        print (state)
         self.assertEqual(state['deviceState']['available'],True,"device not back to available")
 
         self.assertEqual(state['deviceState']['visible'], True, "device not back to visible")
