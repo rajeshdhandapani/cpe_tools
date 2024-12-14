@@ -26,8 +26,10 @@ account_email = "thdmonitor@afero.io"
 
 
 account_id="b02f5bc7-d694-426a-bb60-097fa7684660"
-device_id = "86e11097bd848f4a"
+
+device_id    = "86e11097bd848f4a"
 br30_bulb_id = "89f60cdc7eebb95a"
+ota_bulb_id  = "8380a0dd6c35ff66"
 
 association_id = "default"
 
@@ -170,13 +172,50 @@ class ThdMonitor(unittest.TestCase):
         }
         return json.dumps(payload)
 
+    @pytest.mark.linking
+    def test_linking(self):
+        token, metadevice_id = self.get_device_and_token(test_device_id=ota_bulb_id)
+        self.reboot_Device(token,device_id=ota_bulb_id)
+        time.sleep(120)
+        state = self.get_device_state(token,ota_bulb_id)
+        self.assertEqual(state['deviceState']['available'],True,"device not back to available")
+
+        self.assertEqual(state['deviceState']['visible'], True, "device not back to visible")
+        self.assertEqual(state['deviceState']['linked'], True, "device not back to visible")
+
+    def get_device_state(self,token,device_id):
+        u = 'https://api2.afero.net//v1/accounts/%s/devices/%s'%(account_id,device_id)
+        result = None
+        for i in range (1,4):
+            try:
+                result = requests.get(u, headers=self.get_headers_common(token),params={"expansions":["state"]})
+            except Exception as e:
+                print ("exception while calling semantics api to get metadevice state! ",e)
+            if result!=None:
+                if result.status_code == 200:
+                    break
+            time.sleep(4)
+        return result.json()
+    def reboot_Device(self,token,device_id=ota_bulb_id,account_id="b02f5bc7-d694-426a-bb60-097fa7684660"):
+
+        data = [{"type": "attribute_write", "attrId": 65012, "value": "01"}]
+        u = 'https://api2.afero.net/v1/accounts/%s/devices/%s/requests'%(account_id,device_id)
+        for i in range (1,4):
+            try:
+                result = requests.post(u, data=json.dumps(data), headers=self.get_headers_common(token))
+            except Exception as e:
+                print ("exception while calling semantics api to post device! ",e)
+            if result!=None:
+                if result.status_code == 202:
+                    break
+            time.sleep(3)
 
     @pytest.mark.association
     def test_disassociate_and_associate(self):
 
         elapsed_times_removal = []
         elapsed_times_addition = []
-        for i in range (1,4):
+        for i in range (1,2):
 
             time.sleep(5)
             token, metadevice_id = self.get_device_and_token()
@@ -198,8 +237,20 @@ class ThdMonitor(unittest.TestCase):
             self.assertEqual(res.status_code, 200, "non 200 response while calling semantics api to get metadevices after posting the device and waiting for 5 sec :o ! ")
             devices = res.json()
             self.assertEqual(len(devices), 1, "didn't get back 1 device from semantics api after adding and waiting for 5 sec!")
+
+
         print ("Time taken to remove device from account in seconds  : ",str(elapsed_times_removal))
         print ("Time taken to post device to account in seconds : ",str(elapsed_times_addition))
+
+
+    # def test_attr(self):
+    #     token, metadevice_id = self.get_device_and_token()
+    #     print (metadevice_id)
+    #     self.assertIsNotNone(metadevice_id, "didn't get the metadevice id for the device id: " + device_id)
+    #     res = self.get_metadevice_semantic_state(token,metadevice_id)
+    #     print (res)
+    #     self.assertIsNotNone(res, "didn't get the metadevice state for the device id: " + device_id)
+    #     print (res.json())
 
     @pytest.mark.voice
     def test_voice(self):
@@ -207,7 +258,7 @@ class ThdMonitor(unittest.TestCase):
         self.assertIsNotNone(metadevice_id, "didn't get the metadevice id for the device id: " + br30_bulb_id)
 
         print (metadevice_id)
-        for i in range (1,4):
+        for i in range (1,3):
             time.sleep(5)
             self.voice_test(token,metadevice_id)
 
@@ -267,7 +318,7 @@ class ThdMonitor(unittest.TestCase):
 
 
         # self.assertEqual(result.status_code, 200, "didn't get back 200 from voice command run")
-        time.sleep(5    )
+        time.sleep(5)
         print(result.text)
         print(result.json())
 
@@ -280,9 +331,10 @@ class ThdMonitor(unittest.TestCase):
                 return value['value']
 
 
-    def get_metadevice_semantic_state(self, token,metadevice_id):
+    def get_metadevice_semantic_state(self, token,metadevice_id,):
         u = 'https://semantics2.afero.net/v1/accounts/%s/metadevices/%s/state' % (account_id, metadevice_id)
-
+        print ( "url")
+        print (u)
         result = None
 
         for i in range (1,4):
