@@ -176,14 +176,17 @@ class ThdMonitor(unittest.TestCase):
     def test_linking(self):
         token, metadevice_id = self.get_device_and_token(test_device_id=ota_bulb_id)
         self.reboot_Device(token,device_id=ota_bulb_id)
-        time.sleep(120)
-        state = self.get_device_state(token,ota_bulb_id)
-        print ("State : ")
-        print (state)
-        self.assertEqual(state['deviceState']['available'],True,"device not back to available")
+        flag = False
+        for i in range (1,10):
+            time.sleep(20)
+            state = self.get_device_state(token,ota_bulb_id)
+            print ("State : ")
+            print (state)
+            if state['deviceState']['available'] == True and state['deviceState']['visible'] == True and state['deviceState']['linked'] == True:
+                flag = True
+                break
 
-        self.assertEqual(state['deviceState']['visible'], True, "device not back to visible")
-        self.assertEqual(state['deviceState']['linked'], True, "device not back to visible")
+        self.assertTrue(flag,"didn't get the device linked after rebooting it! ")
 
     def get_device_state(self,token,device_id):
         u = 'https://api2.afero.net//v1/accounts/%s/devices/%s'%(account_id,device_id)
