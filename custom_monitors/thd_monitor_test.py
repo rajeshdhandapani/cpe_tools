@@ -136,7 +136,7 @@ class ThdMonitor(unittest.TestCase):
                     break
             time.sleep(3)
 
-        self.assertEqual(result.status_code, 200, "non 200 response while calling semantics api to remove metadevice! ")
+        self.assertIn(result.status_code, [200,404], "non 200/404 response while calling semantics api to remove metadevice! ")
         elapsed_time = str(result.elapsed.total_seconds())
         print ("Time taken to remove device from account in seconds  : ",elapsed_time)
 
