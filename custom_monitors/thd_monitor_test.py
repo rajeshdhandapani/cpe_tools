@@ -176,20 +176,26 @@ class ThdMonitor(unittest.TestCase):
     def test_linking(self):
         token, metadevice_id = self.get_device_and_token(test_device_id=ota_bulb_id)
         self.reboot_Device(token,device_id=ota_bulb_id)
+        time.sleep(20)
         flag = False
+        updated_timestamp = 0
         for i in range (1,10):
             time.sleep(20)
             state = self.get_device_state(token,ota_bulb_id)
             print ("State : ")
             print (state)
             if state['deviceState']['available'] == True and state['deviceState']['visible'] == True and state['deviceState']['linked'] == True:
+                updated_timestamp = state['deviceState']['updatedTimestamp']
                 flag = True
                 break
+        self.assertNotEqual(updated_timestamp,0,"didn't get the updated timestamp for the device linked after rebooting it! ")
+
+        self.assertTrue(self.is_timestamp_recent(updated_timestamp,minutes=3),"updated timestamp is not recent! ")
 
         self.assertTrue(flag,"didn't get the device linked after rebooting it! ")
 
     def get_device_state(self,token,device_id):
-        u = 'https://api2.afero.net//v1/accounts/%s/devices/%s'%(account_id,device_id)
+        u = 'https://api2.afero.net/v1/accounts/%s/devices/%s'%(account_id,device_id)
         result = None
         for i in range (1,4):
             try:
@@ -214,6 +220,14 @@ class ThdMonitor(unittest.TestCase):
                 if result.status_code == 202:
                     break
             time.sleep(3)
+
+    def is_timestamp_recent(self,timestamp, minutes=3):
+        current_time = datetime.datetime.now()
+        timestamp_time = datetime.datetime.fromtimestamp(timestamp / 1000)  # Convert milliseconds to seconds
+        time_difference = current_time - timestamp_time
+        print ("Time diff : ")
+        print (time_difference)
+        return time_difference <= datetime.timedelta(minutes=minutes)
 
     @pytest.mark.association
     def test_disassociate_and_associate(self):
