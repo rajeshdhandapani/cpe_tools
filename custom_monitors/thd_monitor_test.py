@@ -12,6 +12,11 @@ secret = "default"
 if password_field in os.environ:
     password = os.getenv(password_field)
 
+thddevices_password_field = "thddevices_password"
+thddevices_password = "default"
+if thddevices_password_field in os.environ:
+    thddevices_password = os.getenv(thddevices_password_field)
+
 env = "thd"
 
 
@@ -19,17 +24,20 @@ secret_field = 'thd_automation_client_secret'
 if secret_field in os.environ:
     secret = os.getenv(secret_field)
 
-account_email = "thdmonitor@afero.io"
 
+
+account_email = "thdmonitor@afero.io"
+thd_account_email = "thddevices@afero.io"
 
 
 
 
 account_id="b02f5bc7-d694-426a-bb60-097fa7684660"
-
+thd_devices_account_id = "4eff4df8-56f0-4090-91ff-99a75c40dc27"
 device_id    = "86e11097bd848f4a"
 br30_bulb_id = "89f60cdc7eebb95a"
 ota_bulb_id  = "8380a0dd6c35ff66"
+ceiling_fan_id = "8cc5f008d18d8bb2"
 
 association_id = "default"
 
@@ -71,7 +79,7 @@ class ThdMonitor(unittest.TestCase):
 
         return result
 
-    def get_auth_token(self):
+    def get_auth_token(self,account_email=account_email,password=password):
         result = None
         for i in range (1,4):
             url = "https://accounts.hubspaceconnect.com/auth/realms/thd/protocol/openid-connect/token"
@@ -99,8 +107,8 @@ class ThdMonitor(unittest.TestCase):
         return result
 
 
-    def get_device_and_token(self,test_device_id=None):
-        res = self.get_auth_token()
+    def get_device_and_token(self,test_device_id=None,account_email=account_email,password=password,account_id=account_id):
+        res = self.get_auth_token(account_email=account_email,password=password)
 
         token = res.json()['access_token']
         self.assertIsNotNone(token, "Failed to get token!")
@@ -174,14 +182,20 @@ class ThdMonitor(unittest.TestCase):
 
     @pytest.mark.linking
     def test_linking(self):
-        token, metadevice_id = self.get_device_and_token(test_device_id=ota_bulb_id)
-        self.reboot_Device(token,device_id=ota_bulb_id)
+        self.linking_common(ota_bulb_id)
+
+    @pytest.mark.linking_fan
+    def test_linking_fan(self):
+        self.linking_common(ceiling_fan_id,account_email=thd_account_email,password=thddevices_password,account_id=thd_devices_account_id)
+    def linking_common(self,device_id,account_email=account_email,password=password,account_id=account_id):
+        token, metadevice_id = self.get_device_and_token(test_device_id=device_id,account_email=account_email,password=password,account_id=account_id)
+        self.reboot_Device(token,device_id=device_id,account_id=account_id)
         time.sleep(20)
         flag = False
         updated_timestamp = 0
         for i in range (1,10):
             time.sleep(20)
-            state = self.get_device_state(token,ota_bulb_id)
+            state = self.get_device_state(token,device_id,account_id=account_id)
             print ("State : ")
             print (state)
             if state['deviceState']['available'] == True and state['deviceState']['visible'] == True and state['deviceState']['linked'] == True:
@@ -194,7 +208,7 @@ class ThdMonitor(unittest.TestCase):
 
         self.assertTrue(flag,"didn't get the device linked after rebooting it! ")
 
-    def get_device_state(self,token,device_id):
+    def get_device_state(self,token,device_id,account_id=account_id):
         u = 'https://api2.afero.net/v1/accounts/%s/devices/%s'%(account_id,device_id)
         result = None
         for i in range (1,4):
@@ -207,7 +221,7 @@ class ThdMonitor(unittest.TestCase):
                     break
             time.sleep(4)
         return result.json()
-    def reboot_Device(self,token,device_id=ota_bulb_id,account_id="b02f5bc7-d694-426a-bb60-097fa7684660"):
+    def reboot_Device(self,token,device_id=ota_bulb_id,account_id=account_id):
 
         data = [{"type": "attribute_write", "attrId": 65012, "value": "01"}]
         u = 'https://api2.afero.net/v1/accounts/%s/devices/%s/requests'%(account_id,device_id)
