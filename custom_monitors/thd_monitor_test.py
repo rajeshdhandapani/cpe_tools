@@ -153,6 +153,7 @@ class ThdMonitor(unittest.TestCase):
     def post_device_to_account(self,token,account_id,payload,expansions=[],locale="en_US",verified='true'):
         u = 'https://semantics2.afero.net/v1/accounts/%s/devices'%(account_id)
         query_params = {"expansions":expansions,"verified":verified,"locale":locale}
+        result = None
         for i in range (1,4):
             try:
                 result = requests.post(u,headers=self.get_headers_common(token),data=payload,params=query_params,timeout=4)
