@@ -310,7 +310,7 @@ class ThdMonitor(unittest.TestCase):
         self.executeCommand(token,payload)
 
 
-        time.sleep(5)
+        time.sleep(10)
         final_state = self.get_current_on_off_state(token,metadevice_id)
         print(initial_state)
         print(final_state)
